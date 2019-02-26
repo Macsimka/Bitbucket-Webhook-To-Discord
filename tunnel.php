@@ -25,9 +25,9 @@ class BitbucketWebhookToDiscordException extends \Exception
      */
     public function errorRecording($error)
     {
-        $file = fopen("error.txt", "w");
+        /*$file = fopen("error.txt", "w");
         fwrite($file, "$error\n");
-        fclose($file);
+        fclose($file);*/
         exit();
     }
 }
@@ -63,8 +63,6 @@ class BitbucketWebhookToDiscord
     {
         $webhookArray = $this->readJson();
         $converted = $this->convertFromBitbucket($webhookArray);
-
-        return $this->postToDiscord($converted);
     }
 
     /**
@@ -76,6 +74,7 @@ class BitbucketWebhookToDiscord
     public function readJson()
     {
         $pre = file_get_contents('php://input');
+
         $input = json_decode($pre, true);
 
         if ($input === false) {
@@ -90,48 +89,37 @@ class BitbucketWebhookToDiscord
      *
      * @param $webhookArray
      *
-     * @return array
      * @throws BitbucketWebhookToDiscordException
      */
-    public function convertFromBitbucket($webhookArray)
+    public function convertFromBitbucket($data)
     {
-        $username = lcfirst($webhookArray["actor"]["username"]);
-        $userUrl = $webhookArray["actor"]["links"]["html"]["href"];
-        $avatarUrl = $webhookArray["actor"]["links"]["avatar"]["href"];
-        $repositoryName = $webhookArray["repository"]["name"] . "." . $webhookArray["repository"]["scm"];
-        $branch = $webhookArray["push"]["changes"][0]["new"]["name"];
-        $commits = [];
+        $base_link = "https://bitbucket.org/";
 
-        foreach ($webhookArray["push"]["changes"][0]["commits"] as $commitArr) {
-            $hash = substr($commitArr["hash"], 0, 7);
-            $commitMessage = $commitArr["message"];
+		$repo = $data['repository']['name'];
+		$url = $base_link . $data['repository']['full_name'];
+        
+		$user = [
+			"name" => $data['actor']['display_name'],
+			"icon_url" => $data['actor']['links']['avatar']['href'],
+			"url" => $base_link . $data['actor']['username']
+		];
 
-            $commits[] = [
-                "name" => $hash . " (" . date("d-m-Y H:i", strtotime($commitArr["date"])) . ")",
-                "value" => $commitMessage,
-            ];
-        }
+		foreach ($data['push']['changes'] as $change) {
+			$branch = ($change['new'] !== null) ? $change['new']['name'] : $change['old']['name'];
+			$commits = [];
+            
+			foreach ($change["commits"] as $commit) {
+				$commit_hash = substr($commit['hash'], 0, 7);
 
-        $commits = array_reverse($commits);
-        $converted = [
-            'embeds' => [
-                [
-                    "description" => "Pushed in BitBucket \"" . $repositoryName . "\" (Branch: " . $branch . ")\n",
-                    "fields" => $commits,
-                    "author" => [
-                        "name" => $username,
-                        "url" => $userUrl,
-                        "icon_url" => $avatarUrl,
-                    ],
-                ],
-            ],
-        ];
+                $discordMessage = [
+                    'username' => isset($commit['author']['user']) ? $commit['author']['user']['display_name'] : "Bitbucket",
+                    'avatar_url' => isset($commit['author']['user']) ? $commit['author']['user']['links']['avatar']['href'] : "https://www.shareicon.net/download/2015/09/24/106562_branch_512x512.png",
+                    'content' => "[{$repo}:{$branch}:{$commit_hash}]({$commit['links']['html']['href']})\n{$commit['message']}"
+                ];
 
-        if ($converted === false) {
-            throw new BitbucketWebhookToDiscordException("BitbucketWebhookToDiscord: Invalid output data");
-        }
-
-        return $converted;
+                $this->postToDiscord($discordMessage);
+			}
+		}
     }
 
     /**
@@ -144,6 +132,8 @@ class BitbucketWebhookToDiscord
      */
     public function postToDiscord($data)
     {
+        sleep(3);
+        
         $url = self::DISCORD_BASE_URL . "/webhooks/{$this->webhookId}/{$this->webhookToken}";
         $header = ['Content-Type: application/json',];
 
@@ -180,10 +170,10 @@ class BitbucketWebhookToDiscord
 }
 
 try {
-    $id = "id_you_got_from_discord";
-    $token = "token_you_got_from_discord";
+    $id = "";
+    $token = "";
 
-    if (!isset($_GET['id']) && !isset($_GET['token']) && (!isset($_GET['service']) || $_GET['service'] !== 'Bitbucket')) {
+    if (!isset($_GET['id']) && !isset($_GET['token'])) {
         throw new BitbucketWebhookToDiscordException("BitbucketWebhookToDiscord: Invalid request: parameter(s) missing");
     } else {
         $id = $_GET['id'];
