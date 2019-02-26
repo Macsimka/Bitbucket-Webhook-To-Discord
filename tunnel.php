@@ -95,21 +95,21 @@ class BitbucketWebhookToDiscord
     {
         $base_link = "https://bitbucket.org/";
 
-		$repo = $data['repository']['name'];
-		$url = $base_link . $data['repository']['full_name'];
+        $repo = $data['repository']['name'];
+        $url = $base_link . $data['repository']['full_name'];
         
-		$user = [
-			"name" => $data['actor']['display_name'],
-			"icon_url" => $data['actor']['links']['avatar']['href'],
-			"url" => $base_link . $data['actor']['username']
-		];
+        $user = [
+            "name" => $data['actor']['display_name'],
+            "icon_url" => $data['actor']['links']['avatar']['href'],
+            "url" => $base_link . $data['actor']['username']
+        ];
 
-		foreach ($data['push']['changes'] as $change) {
-			$branch = ($change['new'] !== null) ? $change['new']['name'] : $change['old']['name'];
-			$commits = [];
+        foreach ($data['push']['changes'] as $change) {
+            $branch = ($change['new'] !== null) ? $change['new']['name'] : $change['old']['name'];
+            $commits = [];
             
-			foreach ($change["commits"] as $commit) {
-				$commit_hash = substr($commit['hash'], 0, 7);
+            foreach ($change["commits"] as $commit) {
+                $commit_hash = substr($commit['hash'], 0, 7);
 
                 $discordMessage = [
                     'username' => isset($commit['author']['user']) ? $commit['author']['user']['display_name'] : "Bitbucket",
@@ -118,8 +118,8 @@ class BitbucketWebhookToDiscord
                 ];
 
                 $this->postToDiscord($discordMessage);
-			}
-		}
+            }
+        }
     }
 
     /**
