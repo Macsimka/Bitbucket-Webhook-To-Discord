@@ -9,7 +9,7 @@ https://discordapp.com/api/webhooks/123454321/abcdedcba
 abcdedcba is TOKEN
 ```
 2. Deploy this package to your webserver
-3. On Bitbucket create webhook to http(s)://myserver.com/tunnel.php?service=Bitbucket&id=ID&token=TOKEN
+3. On Bitbucket create webhook to http(s)://myserver.com/tunnel.php?id=ID&token=TOKEN
 4. Try pushing something to the Bitbucket repository and see if it gets printed on Discord
 
 ![](http://s01.geekpic.net/di-FPS91H.png)
